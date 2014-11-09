@@ -1,0 +1,109 @@
+# Run model and save JAGS output
+# requires tempDataSync input binary file
+# saves output M.huc to binary file
+#
+# usage: $ Rscript run_model.R <input tempDataSync rdata> <output jags rdata>
+# example: $ Rscript run_model.R ./tempDataSync.RData ./jags.RData
+
+# NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
+
+# parse command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+tempDataSync_file <- args[1]
+if (!file.exists(tempDataSync_file)) {
+  stop(paste0('Could not find tempDataSync binary file: ', tempDataSync_file))
+}
+load(tempDataSync_file)
+
+output_file <- args[2]
+if (file.exists(output_file)) {
+  warning(paste0('Output file already exists, overwriting: ', output_file))
+}
+
+output2_file <- args[2]
+if (file.exists(output2_file)) {
+  warning(paste0('Output2 file already exists, overwriting: ', output2_file))
+}
+
+# ----
+### Run the model in JAGS
+
+library(dplyr)
+#library(nlme)
+library(devtools)
+install_github("Conte-Ecology/conteStreamTemperature")
+library(conteStreamTemperature)
+
+#baseDir <- getwd() # works as long as you have the project loaded in RStudio - does not work for kniting
+
+#dataInDir <- paste0(baseDir, '/dataIn/')
+#dataOutDir <- paste0(baseDir, '/dataOut/')
+#dataLocalDir <- paste0(baseDir, '/localData/')
+#graphsDir <- paste0(baseDir, '/graphs/')
+
+#source(paste0(baseDir, 'code/functions/temperatureModelingFunctions.R'))
+
+# load standardized and formatted data created with the 3-statModelPrep.Rmd script
+#load(paste0(dataOutDir, 'tempDataSync-MA.RData'))
+
+fixed.ef <- c("intercept" 
+              , "Latitude" 
+              , "Longitude" 
+              , "TotDASqKM" 
+              , "Forest" 
+              , "ReachElevationM" 
+              , "SurficialCoarseC" 
+              , "CONUSWetland" 
+              , "ImpoundmentsAllSqKM" 
+              , "airTemp.TotDASqKM"
+)
+
+site.ef <- c( "intercept.site" 
+              , "airTemp" 
+              , "airTempLagged2" 
+              , "prcp" 
+              , "prcpLagged1" 
+              , "airTemp.prcp"
+)
+
+year.ef <- c( "intercept.year"
+              , "dOY" 
+              , "dOY2"
+              , "dOY3"
+)
+
+cov.list <- list(fixed.ef = fixed.ef, site.ef = site.ef, year.ef = year.ef)
+# model matrix not working because creates a design matrix
+
+#data.cal <- prepDF(tempDataSyncS, formulae = formulae)
+#str(data.cal)
+
+monitor.params <- c(#"residuals",
+  #"deviance",
+  "sigma",
+  "B.ar1",
+  "mu.ar1",
+  "sigma.ar1",
+  "B.0",
+  "B.site",
+  "rho.B.site",
+  "mu.site",
+  "sigma.b.site",
+  "B.huc",
+  "rho.B.huc",
+  "mu.huc",
+  "sigma.b.huc",
+  "B.year",
+  "rho.B.year",
+  "mu.year",
+  "sigma.b.year")
+
+coda.tf <- T # currently only works in full for TRUE (using coda.samples)
+system.time(M.ar1 <- modelRegionalTempAR1(tempDataSyncS, cov.list, firstObsRows = firstObsRows, evalRows = evalRows, n.burn = 1000, n.it = 1000, n.thin = 1, nc = 3, coda = coda.tf, param.list = monitor.params)) # Slow with AR1: ~3-6 min per 100 iterations (13 min per 100 iter for site AR)
+
+saveRDS(M.ar1, file = paste0(dataLocalDir, "mcmc-list.RData"))
+saveRDS(cov.list, file = paste0(dataLocalDir, "covariate-list.RData"))
+
+
+# save to rdata
+# saveRDS(M.huc, file=output_file)

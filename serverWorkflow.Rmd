@@ -1,0 +1,280 @@
+---
+title: "Server Workflow"
+author: "Jeffrey D Walker, PhD"
+date: "October 10, 2014"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library(lubridate)
+library(dplyr)
+```
+
+
+# Overview
+
+This folder contains scripts and documents outlining the workflow for running the stream temperature model.  
+
+# Load Input Datasets
+
+The input data is comprised of four external datasets:
+
+- `temperatureData`: dataset containing observed stream temperatures as provided by various agencies
+- `covariateData`: dataset containing the covariate data for each catchment 
+- `climateData`: dataset containing the climate data for each catchment
+- `catchments`: shapefile of NHDplus catchments (**Is this actually needed?**)
+
+## Temperature Data
+
+The observed temperature data can be extracted from the PostgreSQL database using the temperatureData.sql script.
+
+```
+$ psql -d conte_dev -f retrieve_temperature.sql -q
+```
+
+The SQL script creates a view of the temperature data by joining the `values`, `series`, `agencies`, `locations`, and `variables` tables. This view is then written to the `temperatureData.csv` file.
+
+```
+CREATE TEMPORARY VIEW dataset AS 
+  SELECT a.name AS agency, l.name AS location, concat_ws('_', a.name, l.name) AS site,
+         l.latitude AS latitude, l.longitude AS longitude, l.catchment_id AS catchment,
+         v.datetime AT TIME ZONE 'UTC' AS DATE, v.value AS temp
+  FROM values v
+  LEFT JOIN series s ON v.series_id=s.id
+  LEFT JOIN agencies a ON s.agency_id=a.id
+  LEFT JOIN locations l ON s.location_id=l.id
+  LEFT JOIN variables var ON s.variable_id=var.id
+  WHERE var.name='TEMP'
+  ORDER BY AGENCY, SITE, DATE;
+
+\COPY (SELECT * FROM dataset) TO 'temperatureData.csv' CSV HEADER;
+```
+
+The `temperatureData.csv` file then contains a data frame with the following columns. Note that this table already includes a reference to the catchments (featureid).
+
+```{r temperature csv}
+temperatureData <- read.csv('temperatureData.csv', stringsAsFactors=FALSE) %>%
+  mutate(date=ymd_hms(date))
+saveRDS(temperatureData, file='temperatureData.RData')
+str(temperatureData)
+```
+
+## Covariate Data
+
+The covariate data includes various characteristics of each catchment such as land use composition, soil types, drainage area, and climate normals. These covariates are used as independent variables in the model.
+
+The covariate data are retrieved from the database using the `retrieve_covariates.sql` script, which writes the dataset to a `covariateData.csv` file.
+
+```
+$ psql -d conte_dev -f `retrieve_covariates.sql` -q
+```
+
+The `covariateData.csv` file contains the following columns. Note that the `featureid` is the unique identifier that is referenced by the `catchment` column in `temperatureData`.
+
+```{r covariate csv}
+covariateData <- read.csv('covariateData.csv', stringsAsFactors=FALSE)
+saveRDS(covariateData, file='covariateData.RData')
+str(covariateData)
+```
+
+**NOTE**: Currently the database has only the LocalStats (I think), and we need to import the UpstreamStats for each catchment as a new table. However, the structure will remain the same.
+
+## Climate Data
+
+Similarly, the climate data from Daymet can be retrieved from the database (or perhaps from a separate SQLite database). The climate data includes continuous timeseries of air temperature, day length, solar radiation, snow-water equivalent, vapor pressure and precipitation. 
+
+**Question**: Is the climate data averaged over the catchment or at the same location of each water temperature site?
+
+**NOTE**: The daymet data is not yet in the database, but in theory it will have a structure like this:
+
+```{r}
+# for the purpose this example, extract the climate data from observedStreamTempAndClimateData_MADEP.RData
+load('../../dataIn/MADEP/observedStreamTempAndClimateData_MADEP.RData')
+climateData <- select(masterData, site, date, dayl, srad, swe, maxAirTemp, 
+                      minAirTemp, vp, airTemp, prcp) %>%
+  mutate(date=as.POSIXct(date))
+saveRDS(climateData, file='climateData.RData')
+str(climateData)
+```
+
+# Derived Datasets
+
+After retrieving the external input datasets, a set of derived input datasets are computed. These derived datasets include:
+
+- `masterData`: combination of the water temperature and climate datasets
+- `springFallBPs`: defines the spring and fall breakpoint for each site and year
+- `tempDataSyncS`: the complete input dataset for the model that is a combination of the observed stream temperature, spring/fall breakpoints, and covariates
+
+# Master Dataset
+
+The `masterData` data frame is derived by merging the local and upstream climate data for each site and catchment. The local climate data is used for all climate variables except precipitation, which is based on the upstream climate data.
+
+```{r masterData, message=FALSE}
+# use MADEP temperature data here because the climateData in this document only includes MADEP
+masterData <- filter(temperatureData, agency=='MADEP') %>%
+  left_join(climateData)
+saveRDS(masterData, file='masterData.RData')
+str(masterData)
+```
+
+# Spring/Fall Breakpoints
+
+Spring and fall breakpoints are computed based on the observed water temperature and climate data contained in the `masterData` data frame. The breakpoint analysis is contained in a script called `breakpoints.R`, which is run at the command line using arguments specifying the paths to the input `masterData` and `covariateData` binary files, and an output `springFallBPs` binary files.
+
+```
+$ Rscript breakpoints.R ./masterData.RData ./covariateData.RData ./springFallBPs.RData 
+```
+
+The output file `springFallBPs.RData` contains a data frame specifying the spring and fall breakpoints for each site and year.
+
+```{r breakpoints dataset}
+# for this example analysis, the springFallBPs are loaded from the existing RData file in dataOut/
+load('../../dataOut/springFallBreakpoints.RData')
+str(springFallBPs)
+```
+
+# Prepare Model Input Dataset
+
+The previous datasets are then combined into a single dataset that is the direct input to the model (`tempDataSyncS`). This process is performed using the `prepare_model_data.R` script, which accepts the input datasets as command line arguments, as well as a path to the output file.
+
+```
+$ Rscript prepare_model_data.R ./masterData.RData ./covariateData.RData ./springFallBPs.RData ./tempDataSync.RData
+```
+
+The output data will contain four data frames including standardized and validation datasets (`tempDataSync`, `tempDataSyncS`, `tempDataSyncValid`, `tempDataSyncValidS`). 
+
+**Note**: unlike the other rdata files, this file will be generated using `save()` instead of `saveRDS()`.
+
+**Question**: is it necessary to save all three of these, or can we just save `tempDataSync`? How will validation data be checked?
+
+**Dan's Notes**: 
+* This script has become a bit more convoluted and complex. I wrote a messy wrapper to do most of the data prep. The reason for this is so it can be used later for preparing data for preditions. If there is a better way to handle this I'd be happy to adapt it.
+
+The structure of the `tempDataSync` file is:
+
+```{r}
+load('../../dataOut/tempDataSync.RData')
+str(tempDataSync)
+```
+
+# Run Model
+
+After the input dataset is prepared, the model can be executed using the script `run_model.R`, which takes as command line arguments the input dataset and path to the output binary file. The output file (e.g. `jags.RData`) will contain the MCMC output generated by JAGS (`M.huc`).
+
+```
+$ Rscript run_model ./tempDataSync.RData ./jags.RData
+```
+
+**Note**: could not find any existing JAGS output dataframe, so structure not shown
+
+# Summarize Model
+
+After the model is executed, a summary of the model parameters is created and saved to another binary file.
+
+```
+$ Rscript summarize ./tempDataSync.RData ./jags.RData ./modSummary.RData
+```
+
+The model summary object is an S4 (?) class of type `jagsSummary`. It 
+
+```{r modSummary structure}
+# load from existing modSummary in dataOut/
+load('../../dataOut/modSummary.RData')
+attributes(modSummary) %>% str(max.level=2)
+```
+
+This data structure can also be saved to a JSON file for storage on the server.
+
+```{r save modSummary}
+suppressPackageStartupMessages(library(jsonlite))
+write(toJSON(attributes(modSummary), pretty=TRUE), 'modSummary.json')
+```
+
+This file looks like:
+
+```
+{
+    "fixEf": [
+        {
+            "Mean": 17.3278,
+            "Std. Error": 0.2316,
+            "LCI": 16.895,
+            "UCI": 17.794,
+            "_row": "intercept"
+        },
+        {
+            "Mean": -0.0246,
+            "Std. Error": 0.1239,
+            "LCI": -0.2677,
+            "UCI": 0.2231,
+            "_row": "lat"
+        },
+        ...
+    ],
+    "ranEf": {
+        "ranSite": [
+            {
+                "Variance": 1.572,
+                "SD": 1.2538,
+                "_row": "intercept.site"
+            },
+            {
+                "Variance": 0.1662,
+                "SD": 0.4077,
+                "_row": "airTemp"
+            },
+            ...
+        ],
+        "ranHUC": [
+            {
+                "Variance": 0.2646,
+                "SD": 0.5144,
+                "_row": "intercept.site"
+            },
+            {
+                "Variance": 0.1829,
+                "SD": 0.4277,
+                "_row": "airTemp"
+            },
+            ...
+        ],
+        ...
+    },
+    ...
+}
+```
+
+# Server Deployment
+
+To run this system on the server, a bash script will be created that runs each script sequentially. Note that by using command line arguments to specify the input and output file locations, we can use the same scripts to run the model with different datasets. For example, the bash script could be configured to take a single directory as an input, and to write all input and output files to that directory. This will let us keep previous model runs without having to overwrite each input/output file. These files can also be accessed using RStudio Server directly, so each model run can be manually inspected in a regular RStudio IDE (that runs through a web page). 
+
+As an example, when a new model run is requested, the server will run the following command to call the temperature_model bash script. The argument specifies a date/timestamp for naming the directory of this model run.
+
+```
+$ bash temperature_model.sh 20141015_1550
+```
+
+This bashscript will then call each of the scripts, saving the input and output files to the specified folder. Note that `$1` is a reference to the argument, which in this case would be `20141015_1550`
+
+```
+mkdir $1
+psql -d conte_dev -f retrieve_temperature.sql -q
+mv temperatureData.csv $1/temperatureData.csv
+psql -d conte_dev -f `retrieve_covariates.sql` -q
+mv covariateData.csv $1/covariateData.csv
+# add another script to convert the temperatureData and covariateData csv files to RData files
+# and create masterData based on code above
+Rscript breakpoints.R $1/masterData.RData $1/covariateData.RData $1/springFallBPs.RData 
+Rscript prepare_model_data.R $1/masterData.RData $1/covariateData.RData $1/springFallBPs.RData $1/tempDataSync.RData
+Rscript run_model $1/tempDataSync.RData $1/jags.RData
+Rscript summarize $1/tempDataSync.RData $1/jags.RData $1/modSummary.RData
+```
+
+After this script runs, all input and output files will be saved in a single folder. A final script could then be run to convert the model summary to json, and upload to the database.
+
+# Predictions
+
+Once the model summary is saved to the database, a script could be written to retrieve a specific model summary (e.g. set of coefficients) and climate data from the database, and to generate a dataset of predictions. Similar idea would be used via bash scripts and Rscript.
