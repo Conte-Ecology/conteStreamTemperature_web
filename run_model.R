@@ -20,7 +20,7 @@ if (file.exists(output_file)) {
   warning(paste0('Output file already exists, overwriting: ', output_file))
 }
 
-output2_file <- args[2]
+output2_file <- args[3]
 if (file.exists(output2_file)) {
   warning(paste0('Output2 file already exists, overwriting: ', output2_file))
 }
@@ -33,18 +33,6 @@ library(dplyr)
 library(devtools)
 install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
-
-#baseDir <- getwd() # works as long as you have the project loaded in RStudio - does not work for kniting
-
-#dataInDir <- paste0(baseDir, '/dataIn/')
-#dataOutDir <- paste0(baseDir, '/dataOut/')
-#dataLocalDir <- paste0(baseDir, '/localData/')
-#graphsDir <- paste0(baseDir, '/graphs/')
-
-#source(paste0(baseDir, 'code/functions/temperatureModelingFunctions.R'))
-
-# load standardized and formatted data created with the 3-statModelPrep.Rmd script
-#load(paste0(dataOutDir, 'tempDataSync-MA.RData'))
 
 fixed.ef <- c("intercept" 
               , "Latitude" 
@@ -101,9 +89,6 @@ monitor.params <- c(#"residuals",
 coda.tf <- T # currently only works in full for TRUE (using coda.samples)
 system.time(M.ar1 <- modelRegionalTempAR1(tempDataSyncS, cov.list, firstObsRows = firstObsRows, evalRows = evalRows, n.burn = 1000, n.it = 1000, n.thin = 1, nc = 3, coda = coda.tf, param.list = monitor.params)) # Slow with AR1: ~3-6 min per 100 iterations (13 min per 100 iter for site AR)
 
-saveRDS(M.ar1, file = paste0(dataLocalDir, "mcmc-list.RData"))
-saveRDS(cov.list, file = paste0(dataLocalDir, "covariate-list.RData"))
-
-
 # save to rdata
-# saveRDS(M.huc, file=output_file)
+saveRDS(M.ar1, file = output_file))
+saveRDS(cov.list, file = output2_file))

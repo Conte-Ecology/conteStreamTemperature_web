@@ -1,9 +1,9 @@
 # Summarize model
-# requires jags input binary file (M.huc dataframe) and tempDataSync file
-# saves output modSummary to binary file
+# requires jags input binary file (M.ar1 dataframe) and tempDataSync file
+# saves output coef.list to binary file coef.RData
 #
 # usage: $ Rscript summarize_model.R <input tempDataSync rdata> <input jags rdata> <output modSummary rdata>
-# example: $ Rscript summarize_model.R ./tempDataSync.RData ./jags.RData ./modSummary.RData
+# example: $ Rscript summarize_model.R ./tempDataSync.RData ./jags.RData ./coef.RData
 
 # NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
 
@@ -31,21 +31,10 @@ if (file.exists(output_file)) {
 library(ggplot2)
 library(ggmcmc)
 library(dplyr)
-#library(nlme)
 library(devtools)
 #install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 library(rjags)
-
-baseDir <- getwd()
-
-dataInDir <- paste0(baseDir, '/dataIn/')
-dataOutDir <- paste0(baseDir, '/dataOut/')
-dataLocalDir <- paste0(baseDir, '/localData/')
-graphsDir <- paste0(baseDir, '/graphs/')
-
-load('localData/mcmc-list.RData')
-load(paste0(dataOutDir, 'tempDataSync.RData'))
 
 system.time(ggs.ar1 <- ggs(M.ar1)) 
 
@@ -148,10 +137,6 @@ coef.list <- list(fix.ef = fix.ef
                   , B.year = B.year
                   , B.ar1 = B.ar1
 )
-
-saveRDS(coef.list, file = "dataOut/coef.Rdata")
-
-
 
 # save(modSummary, file=paste0(dataOutDir, 'modSummary.RData'))
 saveRDS(coef.list, file=output_file)
