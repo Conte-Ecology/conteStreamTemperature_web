@@ -8,6 +8,11 @@
 # NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
 
 library(devtools)
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(zoo)
+library(conteStreamTemperature)
 
 # parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -16,6 +21,11 @@ if (!file.exists(masterData_file)) {
   stop(paste0('Could not find masterData binary file: ', masterData_file))
 }
 masterData <- readRDS(masterData_file)
+
+# add dOY and year columns
+masterData <- mutate(masterData,
+                     dOY=yday(date),
+                     year=year(date))
 
 covariateData_file <- args[2]
 if (!file.exists(covariateData_file)) {
