@@ -35,17 +35,18 @@ if (file.exists(output_file)) {
 
 # ----
 library(ggplot2)
+library(reshape2)
 library(dplyr)
 library(devtools)
 #install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 library(rjags)
 
-tempDataSyncS$tempPredicted <- NA
-tempDataSyncS$tempPredicted <- predictTemp(data = tempDataSyncS, coef.list = coef.list, cov.list = cov.list, firstObsRows = firstObsRows, evalRows = evalRows)
+tempDataSyncS <- predictTemp(data = tempDataSyncS, coef.list = coef.list, cov.list = cov.list)
 
-tempDataSyncValidS$tempPredicted <- NA
-tempDataSyncValidS$tempPredicted <- predictTemp(data = tempDataSyncValidS, firstObsRows = firstObsRows.valid, evalRows = evalRows.valid, coef.list = coef.list, cov.list = cov.list)
+tempDataSyncValidS <- predictTemp(data = tempDataSyncValidS, coef.list = coef.list, cov.list = cov.list)
+
+
 
 #library(ggplot2)
 #ggplot(tempDataSyncValidS, aes(temp, tempPredicted)) + geom_point() + geom_abline(aes(1,1), colour = 'blue')
@@ -60,6 +61,7 @@ tempDataSyncS$resid.r <- tempDataSyncS$temp - tempDataSyncS$tempPredicted
 
 rmse.fit <- rmse(tempDataSyncS$resid.r)
 rmse.table <- data.frame(rbind(rmse.fit, rmse.valid))
+colnames(rmse.table) <- "rmse"
 
 saveRDS(rmse.table, file=output_file)
 

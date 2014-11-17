@@ -60,7 +60,7 @@ year.ef <- c( "intercept.year"
               , "dOY3"
 )
 
-cov.list <- list(fixed.ef = fixed.ef, site.ef = site.ef, year.ef = year.ef)
+cov.list <- list(fixed.ef = fixed.ef, site.ef = site.ef, huc.ef = site.ef, year.ef = year.ef)
 # model matrix not working because creates a design matrix
 
 #data.cal <- prepDF(tempDataSyncS, formulae = formulae)

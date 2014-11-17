@@ -92,6 +92,8 @@ tempDataSync <- na.omit(tempDataSync) ####### Needed to take out first few days 
 
 var.names <- c("Latitude", "Longitude", "airTemp", "airTempLagged1", "airTempLagged2", "prcp", "prcpLagged1", "prcpLagged2", "prcpLagged3", "dOY", "Forest", "Herbacious", "Agriculture", "Developed", "TotDASqKM", "ReachElevationM", "ImpoundmentsAllSqKM", "HydrologicGroupAB", "SurficialCoarseC", "CONUSWetland", "ReachSlopePCNT", "srad", "dayl", "swe")
 
+tempDataSync <- mutate(tempDataSync, huc = HUC8)
+
 ### Separate data for fitting (training) and validation
 #If validating:
 if (config[['validate']]) {
