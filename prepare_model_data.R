@@ -98,6 +98,7 @@ tempDataSync <- mutate(tempDataSync, huc = HUC8)
 ### Separate data for fitting (training) and validation
 #If validating:
 if (config[['validate']]) {
+  validateFrac <- 0.2
   n.fit <- floor(length(unique(tempDataSync$site)) * (1 - validateFrac))
   
   set.seed(2346)
