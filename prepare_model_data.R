@@ -13,7 +13,7 @@ library(dplyr)
 library(DataCombine) # for the slide function
 #library(nlme)
 library(devtools)
-install_github("Conte-Ecology/conteStreamTemperature")
+# install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 library(jsonlite)
 
@@ -39,7 +39,7 @@ springFallBPs_file <- args[3]
 if (!file.exists(springFallBPs_file)) {
   stop(paste0('Could not find springFallBPs binary file: ', springFallBPs_file))
 }
-covariateData <- readRDS(covariateData_file)
+springFallBPs <- readRDS(springFallBPs_file)
 
 output_file <- args[4]
 if (file.exists(output_file)) {
@@ -47,7 +47,7 @@ if (file.exists(output_file)) {
 }
 
 
-masterData <- masterData[, c("agency", "date", "AgencyID", "year", "site", "date", "dOY", "temp", "airTemp", "prcp", "srad", "dayl", "swe")]
+masterData <- masterData[, c("agency", "date", "AgencyID", "year", "site", "dOY", "temp", "airTemp", "prcp", "srad", "dayl", "swe")]
 
 #tempData <- left_join(tempData, covariateData)
 
@@ -82,6 +82,7 @@ tempDataSync <- slide(tempDataSync, Var = "prcp", GroupVar = "site", slideBy = -
 tempDataSync <- slide(tempDataSync, Var = "prcp", GroupVar = "site", slideBy = -2, NewVar='prcpLagged2')
 tempDataSync <- slide(tempDataSync, Var = "prcp", GroupVar = "site", slideBy = -3, NewVar='prcpLagged3')
 
+tempDataSync <- left_join(tempDataSync, covariateData)
 
 tempDataSync <- tempDataSync[ , c("agency", "date", "AgencyID", "year", "site", "date", "finalSpringBP", "finalFallBP", "FEATUREID", "HUC4", "HUC8", "HUC12", "temp", "Latitude", "Longitude", "airTemp", "airTempLagged1", "airTempLagged2", "prcp", "prcpLagged1", "prcpLagged2", "prcpLagged3", "dOY", "Forest", "Herbacious", "Agriculture", "Developed", "TotDASqKM", "ReachElevationM", "ImpoundmentsAllSqKM", "HydrologicGroupAB", "SurficialCoarseC", "CONUSWetland", "ReachSlopePCNT", "srad", "dayl", "swe")]
 
@@ -97,6 +98,7 @@ tempDataSync <- mutate(tempDataSync, huc = HUC8)
 ### Separate data for fitting (training) and validation
 #If validating:
 if (config[['validate']]) {
+  validateFrac <- 0.2
   n.fit <- floor(length(unique(tempDataSync$site)) * (1 - validateFrac))
   
   set.seed(2346)
@@ -132,7 +134,4 @@ if (config[['validate']]) {
 } else {
   save(tempDataSync, tempDataSyncS, firstObsRows, evalRows, file = output_file)
 }
-
-
-#save(tempDataSync, tempDataSyncS, tempDataSyncValid, tempDataSyncValidS, file=output_file)
 

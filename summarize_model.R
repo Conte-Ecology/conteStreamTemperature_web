@@ -1,9 +1,9 @@
 # Summarize model
-# requires jags input binary file (M.ar1 dataframe) and tempDataSync file
+# requires jags input binary file (M.ar1 dataframe), covariate-list (cov.list), and tempDataSync
 # saves output coef.list to binary file coef.RData
 #
-# usage: $ Rscript summarize_model.R <input tempDataSync rdata> <input jags rdata> <output modSummary rdata>
-# example: $ Rscript summarize_model.R ./tempDataSync.RData ./jags.RData ./coef.RData
+# usage: $ Rscript summarize_model.R <input tempDataSync rdata> <input jags rdata> <input cov.list rdata> <output coef rdata>
+# example: $ Rscript summarize_model.R ./tempDataSync.RData ./jags.RData ./covariate-list.RData ./coef.RData
 
 # NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
 
@@ -22,7 +22,13 @@ if (!file.exists(jags_file)) {
 }
 M.ar1 <- readRDS(jags_file)
 
-output_file <- args[3]
+covlist_file <- args[3]
+if (!file.exists(covlist_file)) {
+  stop(paste0('Could not find covariate-list binary file: ', covlist_file))
+}
+cov.list <- readRDS(covlist_file)
+
+output_file <- args[4]
 if (file.exists(output_file)) {
   warning(paste0('Output file already exists, overwriting: ', output_file))
 }
@@ -35,6 +41,10 @@ library(devtools)
 #install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 library(rjags)
+
+if (!file.exists('localData')) {
+  dir.create('localData')
+}
 
 system.time(ggs.ar1 <- ggs(M.ar1)) 
 

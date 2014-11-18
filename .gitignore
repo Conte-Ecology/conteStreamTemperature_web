@@ -3,3 +3,6 @@
 .RData
 *.RData
 packrat/lib*/
+code/
+*.csv
+localData/

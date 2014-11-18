@@ -2,8 +2,8 @@
 # requires tempDataSync input binary file
 # saves output M.huc to binary file
 #
-# usage: $ Rscript run_model.R <input tempDataSync rdata> <output jags rdata>
-# example: $ Rscript run_model.R ./tempDataSync.RData ./jags.RData
+# usage: $ Rscript run_model.R <input tempDataSync rdata> <output jags rdata> <output covariate list rdata>
+# example: $ Rscript run_model.R ./tempDataSync.RData ./jags.RData ./covariate-list.RData
 
 # NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
 
@@ -31,7 +31,7 @@ if (file.exists(output2_file)) {
 library(dplyr)
 #library(nlme)
 library(devtools)
-install_github("Conte-Ecology/conteStreamTemperature")
+# install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 
 fixed.ef <- c("intercept" 
@@ -87,8 +87,14 @@ monitor.params <- c(#"residuals",
   "sigma.b.year")
 
 coda.tf <- T # currently only works in full for TRUE (using coda.samples)
+
+# create code directory if doesn't exist
+if (!file.exists('code')) {
+  dir.create('code')
+}
+
 system.time(M.ar1 <- modelRegionalTempAR1(tempDataSyncS, cov.list, firstObsRows = firstObsRows, evalRows = evalRows, n.burn = 1000, n.it = 1000, n.thin = 1, nc = 3, coda = coda.tf, param.list = monitor.params)) # Slow with AR1: ~3-6 min per 100 iterations (13 min per 100 iter for site AR)
 
 # save to rdata
-saveRDS(M.ar1, file = output_file))
-saveRDS(cov.list, file = output2_file))
+saveRDS(M.ar1, file = output_file)
+saveRDS(cov.list, file = output2_file)
