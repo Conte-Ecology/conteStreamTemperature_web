@@ -135,6 +135,3 @@ if (config[['validate']]) {
   save(tempDataSync, tempDataSyncS, firstObsRows, evalRows, file = output_file)
 }
 
-
-save(tempDataSync, tempDataSyncS, tempDataSyncValid, tempDataSyncValidS, file=output_file)
-
