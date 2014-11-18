@@ -13,7 +13,7 @@ library(dplyr)
 library(DataCombine) # for the slide function
 #library(nlme)
 library(devtools)
-install_github("Conte-Ecology/conteStreamTemperature")
+# install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 library(jsonlite)
 
@@ -47,7 +47,7 @@ if (file.exists(output_file)) {
 }
 
 
-masterData <- masterData[, c("agency", "date", "AgencyID", "year", "site", "date", "dOY", "temp", "airTemp", "prcp", "srad", "dayl", "swe")]
+masterData <- masterData[, c("agency", "date", "AgencyID", "year", "site", "dOY", "temp", "airTemp", "prcp", "srad", "dayl", "swe")]
 
 #tempData <- left_join(tempData, covariateData)
 
