@@ -417,7 +417,6 @@ breaks$sourceSpringBP[ huc4BP ] <- 'HUC4 mean'
 huc4BP <- which(is.na(breaks$finalFallBP) & !is.na(breaks$meanFallBPHUC4) )
 breaks$finalFallBP [ huc4BP ] <- breaks$meanFallBPHUC4[ huc4BP ]
 breaks$sourceFallBP[ huc4BP ] <- 'HUC4 mean'
-```
 
 The above data or kriging or something will have to be used to establish the syncronized portion of the year when doing the predictions to all catchments in all years after the model is run. Originally there was a model for the breakpoints but it used all the same covariates as the model of the temperature data, which seemed potentially problematic.
 
