@@ -87,6 +87,12 @@ monitor.params <- c(#"residuals",
   "sigma.b.year")
 
 coda.tf <- T # currently only works in full for TRUE (using coda.samples)
+
+# create code directory if doesn't exist
+if (!file.exists('code')) {
+  dir.create('code')
+}
+
 system.time(M.ar1 <- modelRegionalTempAR1(tempDataSyncS, cov.list, firstObsRows = firstObsRows, evalRows = evalRows, n.burn = 1000, n.it = 1000, n.thin = 1, nc = 3, coda = coda.tf, param.list = monitor.params)) # Slow with AR1: ~3-6 min per 100 iterations (13 min per 100 iter for site AR)
 
 # save to rdata
