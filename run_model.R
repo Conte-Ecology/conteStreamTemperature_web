@@ -2,8 +2,8 @@
 # requires tempDataSync input binary file
 # saves output M.huc to binary file
 #
-# usage: $ Rscript run_model.R <input tempDataSync rdata> <output jags rdata>
-# example: $ Rscript run_model.R ./tempDataSync.RData ./jags.RData
+# usage: $ Rscript run_model.R <input tempDataSync rdata> <output jags rdata> <output model cov rdata>
+# example: $ Rscript run_model.R ./tempDataSync.RData ./jags.RData ./cov.RData
 
 # NOTE: this has not actually been run, and is mostly just copy and pasted from the analysis vignette
 
@@ -31,7 +31,7 @@ if (file.exists(output2_file)) {
 library(dplyr)
 #library(nlme)
 library(devtools)
-install_github("Conte-Ecology/conteStreamTemperature")
+# install_github("Conte-Ecology/conteStreamTemperature")
 library(conteStreamTemperature)
 
 fixed.ef <- c("intercept" 
