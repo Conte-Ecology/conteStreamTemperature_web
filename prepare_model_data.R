@@ -39,7 +39,7 @@ springFallBPs_file <- args[3]
 if (!file.exists(springFallBPs_file)) {
   stop(paste0('Could not find springFallBPs binary file: ', springFallBPs_file))
 }
-covariateData <- readRDS(covariateData_file)
+springFallBPs <- readRDS(springFallBPs_file)
 
 output_file <- args[4]
 if (file.exists(output_file)) {
