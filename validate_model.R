@@ -34,6 +34,9 @@ if (file.exists(output_file)) {
 }
 
 # ----
+
+if(config[["validate"]]) {
+  
 library(ggplot2)
 library(reshape2)
 library(dplyr)
@@ -65,3 +68,4 @@ colnames(rmse.table) <- "rmse"
 
 saveRDS(rmse.table, file=output_file)
 
+}
