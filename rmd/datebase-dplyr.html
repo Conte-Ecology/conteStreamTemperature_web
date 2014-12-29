@@ -70,10 +70,9 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 <div id="libraries" class="section level1">
 <h1>Libraries</h1>
-<p>This document uses two primary libraries: <code>dplyr</code> and <code>tidyr</code>.</p>
+<p>This document uses only one primary library: <code>dplyr</code>.</p>
 <ul>
 <li><code>dplyr</code> is the newest incarnation of the <code>plyr</code> package. See the <a href="http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html">Introduction Vignette</a> on basic usage. One of the powerful things about <code>dplyr</code> is its ability to directly connect to a back-end database (in this case the PostgreSQL database on the Felek server).</li>
-<li><code>tidyr</code> is a simplified version of the <code>reshape</code> package and is used to convert dataframes between wide and long formats. The two primary functions from this package include <code>gather()</code> to convert from wide to long, and <code>spread()</code> to convert from long to wide.</li>
 </ul>
 <pre class="r"><code>library(dplyr)</code></pre>
 <pre><code>## 
@@ -86,7 +85,6 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ## The following objects are masked from 'package:base':
 ## 
 ##     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>library(tidyr)</code></pre>
 </div>
 <div id="connect-to-database" class="section level1">
 <h1>Connect to Database</h1>
@@ -127,7 +125,7 @@ print(tbl_locations)</code></pre>
 <pre class="r"><code>print(tbl_locations$query)</code></pre>
 <pre><code>## &lt;Query&gt; SELECT &quot;id&quot;, &quot;created_at&quot;, &quot;updated_at&quot;, &quot;name&quot;, &quot;description&quot;, &quot;latitude&quot;, &quot;longitude&quot;, &quot;agency_id&quot;, &quot;catchment_id&quot;, &quot;confirmed&quot;
 ## FROM &quot;locations&quot;
-## &lt;PostgreSQLConnection:(7064,0)&gt;</code></pre>
+## &lt;PostgreSQLConnection:(7521,0)&gt;</code></pre>
 <p>The query thus selects all columns from the <code>locations</code> table in the database.</p>
 <p>To execute the query, which will return a dataframe containing all rows of the <code>locations</code> table, use the <code>collect()</code> function:</p>
 <pre class="r"><code>df_locations &lt;- collect(tbl_locations)
@@ -175,7 +173,7 @@ print(qry_locations_agency_2$query)</code></pre>
 ## FROM &quot;locations&quot;
 ## WHERE &quot;agency_id&quot; = 2.0
 ## ORDER BY &quot;name&quot;
-## &lt;PostgreSQLConnection:(7064,0)&gt;</code></pre>
+## &lt;PostgreSQLConnection:(7521,0)&gt;</code></pre>
 <p>The <code>qry_locations_agency_2</code> object then contains a SQL query to select all columns, subset where <code>agency_id=2</code> and sorting by <code>name</code>. Use <code>collect()</code> to retreive the results of this query.</p>
 <pre class="r"><code>df_locations_agency_2 &lt;- collect(qry_locations_agency_2)
 print(nrow(df_locations_agency_2))</code></pre>
@@ -232,7 +230,7 @@ print(qry_locations_MADEP$query)</code></pre>
 ## 
 ## USING (&quot;agency_id&quot;)) AS &quot;_W3&quot;
 ## WHERE &quot;agency_name&quot; = 'MADEP'
-## &lt;PostgreSQLConnection:(7064,0)&gt;</code></pre>
+## &lt;PostgreSQLConnection:(7521,0)&gt;</code></pre>
 <p>Then we get the results using <code>collect()</code>.</p>
 <pre class="r"><code>locations_MADEP &lt;- collect(qry_locations_MADEP)
 summary(locations_MADEP)</code></pre>

@@ -16,14 +16,12 @@ Suggested reading:
 
 # Libraries
 
-This document uses two primary libraries: `dplyr` and `tidyr`. 
+This document uses only one primary library: `dplyr`. 
 
 - `dplyr` is the newest incarnation of the `plyr` package. See the [Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html) on basic usage. One of the powerful things about `dplyr` is its ability to directly connect to a back-end database (in this case the PostgreSQL database on the Felek server).
-- `tidyr` is a simplified version of the `reshape` package and is used to convert dataframes between wide and long formats. The two primary functions from this package include `gather()` to convert from wide to long, and `spread()` to convert from long to wide.
 
 ```{r}
 library(dplyr)
-library(tidyr)
 ```
 
 # Connect to Database
