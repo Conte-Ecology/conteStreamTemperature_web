@@ -1,0 +1,110 @@
+---
+title: "Database Access with dplyr"
+author: "Jeff Walker"
+date: "12/29/2014"
+output: html_document
+---
+
+# Overview
+
+This document summarizes how to access the SHEDS database directly from the `dplyr` package. 
+
+Suggested reading:
+
+- [dplyr Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)
+- [dplyr Database Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html)
+
+# Libraries
+
+This document uses two primary libraries: `dplyr` and `tidyr`. 
+
+- `dplyr` is the newest incarnation of the `plyr` package. See the [Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html) on basic usage. One of the powerful things about `dplyr` is its ability to directly connect to a back-end database (in this case the PostgreSQL database on the Felek server).
+- `tidyr` is a simplified version of the `reshape` package and is used to convert dataframes between wide and long formats. The two primary functions from this package include `gather()` to convert from wide to long, and `spread()` to convert from long to wide.
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+# Connect to Database
+
+To use a back-end database with `dplyr`, we first create a `src` object. Since the SHEDS database is PostgreSQL, use `src_postgres`. For now, use the development database named `conte_dev`, and if you are working within the RStudio Server on felek, then set the host to `127.0.0.1`, which is the local host, and set the port to `5432`. Note that you can also connect remotely using the felek URL as host: `felek.cns.umass.edu`. The user name and password are both `conte` for now, but soon each user will be given their own account.
+
+```{r}
+db <- src_postgres(dbname='conte_dev', host='127.0.0.1', port='5432', user='conte', password='conte')
+print(db)
+```
+
+# Create Table References
+
+To access a table in the PostgreSQL database, use the `tbl(db, 'table_name')` function. The returned object is a reference to the table, but does not actually contain any data. Be careful with table objects that reference large tables (primarily the `daymet`, `covariates`, and `catchments` tables that have millions-billions of rows). If you accidentally try to print one of these tables to the console, R will likely hang.
+
+As an example, we can connect to the `locations` table. Note that when you print one of these tables it shows some metadata first (Source, From), followed by the first 10 rows. However, this object still does not have all of the data within it (the first ten rows are fetched from the database in response to the print command). 
+
+```{r}
+tbl_locations <- tbl(db, 'locations')
+print(tbl_locations)
+```
+
+The `tbl_locations` object is actually a special `dplyr` object that specifies an SQL query. We can access this query by:
+
+```{r}
+print(tbl_locations$query)
+```
+
+The query thus selects all columns from the `locations` table in the database.
+
+To execute the query, which will return a dataframe containing all rows of the `locations` table, use the `collect()` function:
+
+```{r}
+df_locations <- collect(tbl_locations)
+print(nrow(df_locations))
+summary(df_locations)
+```
+
+The `df_locations` object is thus the data frame returned by executing the SQL query in the `tbl_locations` object.
+
+# Complex Queries
+
+The powerful thing about `dplyr` is that we can create more complex queries by chaining special dplyr functions. For example, if we want only locations where `agency_id=2` then we can use the `filter()` function (note that `dplyr` overrides the `stats::filter()` function). We could also sort the result by the location `name` using the `arrange()` function.
+
+```{r}
+qry_locations_agency_2 <- tbl_locations %>%
+  filter(agency_id==2) %>%
+  arrange(name)
+print(qry_locations_agency_2$query)
+```
+
+The `qry_locations_agency_2` object then contains a SQL query to select all columns, subset where `agency_id=2` and sorting by `name`. Use `collect()` to retreive the results of this query.
+
+```{r}
+df_locations_agency_2 <- collect(qry_locations_agency_2)
+print(nrow(df_locations_agency_2))
+summary(df_locations_agency_2)
+```
+
+The resulting dataframe as `r nrow(df_locations_agency_2)` rows, and the summary output shows that `agency_id` only contains values of 2.
+
+# Joining Tables
+
+Finally, we can also join tables in the database using the dplyr `*_join` functions such as `left_join()`. For example, if we wanted to filter by the `name` of the agency, rather than the `id`, we could join the `locations` and `agencies` tables first, then perform a `filter`. Note that I am dropping two columns from the `locations` table (`created_at` and `updated_at`) and renaming the `id` and `name` columns of the `agencies` table to `agency_id` and `agency_name` to avoid conflicts with the `locations` table that also has columns `id` and `name`.
+
+```{r}
+tbl_agencies <- tbl(db, 'agencies')
+
+qry_locations_MADEP <- left_join(select(tbl_locations, -created_at, -updated_at), 
+                                 select(tbl_agencies, agency_id=id, agency_name=name), 
+                                 by=c('agency_id'='agency_id')) %>%
+  filter(agency_name=='MADEP')
+print(qry_locations_MADEP$query)
+```
+
+Then we get the results using `collect()`.
+
+```{r}
+locations_MADEP <- collect(qry_locations_MADEP)
+summary(locations_MADEP)
+print(unique(locations_MADEP$agency_name))
+```
+
+
