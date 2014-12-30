@@ -105,4 +105,38 @@ summary(locations_MADEP)
 print(unique(locations_MADEP$agency_name))
 ```
 
+# Using PostgreSQL Functions
+
+PostgreSQL has large number of very useful functions for manipulating data. For example, there are a suite of [datetime functions](http://www.postgresql.org/docs/9.3/static/functions-datetime.html) for extracting date parts (e.g. get the year of a date using `date_part('year', datetime)`). The PostGIS extension adds another suite of [geospatial functions](http://postgis.net/docs/manual-2.0/PostGIS_Special_Functions_Index.html) for finding intersections, creating geometries, and reprojecting data.
+
+Using `dplyr`, we can actually use these built-in PostgreSQL functions directly from R as if they were functions available to R. For example, if we wanted only data from the values table for the year 2012, we can write:
+
+```{r}
+tbl_values <- tbl(db, 'values')
+qry_values_2012 <- filter(tbl_values, date_part('year', datetime)==2012L)
+```
+
+But note that the function `date_part` is not actually loaded into R:
+
+```{r, error=TRUE}
+date_part
+```
+
+This is possible because `dplyr` uses a special function called `translate_sql()` that converts whatever text is provided as the argument to SQL syntax. A simple example would be replacing the R operator `%in%` with the SQL operator `IN`
+
+```{r}
+translate_sql(x %in% c(1, 2, 3))
+```
+
+Back to the 2012 values, we can see how the `date_part` function was translated into SQL:
+
+```{r}
+print(qry_values_2012$query)
+```
+
+After retrieving the data into a data frame using `collect`, the summary shows that all datetimes occur during year 2012.
+
+```{r}
+collect(qry_values_2012) %>% summary
+```
 
