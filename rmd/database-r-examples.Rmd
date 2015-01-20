@@ -1,0 +1,46 @@
+---
+title: "Postgress to R Examples"
+author: "Daniel Hocking"
+date: "January 20, 2015"
+output: html_document
+---
+
+This document describes and gives examples of pulling data from the conte PostgreSQL database on our server (Felek). For relatively simple query's `dplyr` can be used. For more complex queries and spatial joins the R package `RPostgreSQL` is best.
+
+## Get list of unique catchments with daymet data in our database using `RPostgreSQL`
+
+```{r, eval=FALSE}
+library(RPostgreSQL)
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname="conte_dev", host="127.0.0.1", user="...", password="...")
+qry <- "SELECT DISTINCT featureid FROM daymet;"
+result <- dbSendQuery(con, qry)
+catchments <- fetch(result, n=-1)
+```
+
+To access the database from outside a Felek RStudio session (i.e. from your local computer) you can use `con <- dbConnect(drv, dbname="conte_dev", host="felek.cns.umass.edu", user="...", password="...")`. Using `n = -1` in the `fetch` function means return all rows.
+
+## Create a query that lists all locations and creates 'site' column using `dplyr`
+
+```{r, eval=FALSE}
+  qry_locations <- tbl(db, 'locations') %>%
+    rename(location_id=id, location_name=name, featureid=catchment_id) %>%
+    select(location_id, location_name, latitude, longitude, featureid, agency_id) %>%
+    left_join(tbl(db, 'agencies') %>% rename(agency_name=name, agency_id=id) %>% select(agency_name, agency_id)) %>%
+    select(location_id, location_name, featureid, latitude, longitude, agency_name) %>%
+    mutate(site=concat(agency_name, '_', location_name))
+```
+
+## Get latitude and longitude centroids for each catchment by featureid using `RPostgreSQL`
+
+This uses the `ST_Y`, `ST_X`, and `ST_Centroid` functions within Postgres.
+
+```{r, eval=FALSE}
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname="conte_dev", host="127.0.0.1", user="...", password="...")
+rs <- dbSendQuery(con, "SELECT featureid, 
+                  ST_Y(ST_Centroid(geom)) as latitude, 
+                  ST_X(ST_Centroid(geom)) as longitude 
+                  FROM catchments;")
+featureid_lat_lon <- fetch(rs, n=-1) 
+```
