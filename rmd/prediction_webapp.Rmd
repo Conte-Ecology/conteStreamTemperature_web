@@ -1,0 +1,45 @@
+
+# Coefficient Lists
+
+```{r}
+lst.year <- coef.list$B.year %>%
+  select(year, coef, mean) %>% 
+  split(f=.$year) %>% 
+  lapply(FUN=function(x) { 
+    y <- x$mean
+    names(y) <- x$coef
+    y
+  })
+lst.year[['2012']]
+```
+
+
+```{r}
+lst.huc <- coef.list$B.huc %>%
+  select(huc, coef, mean) %>% 
+  split(f=.$huc) %>% 
+  lapply(FUN=function(x) { 
+    y <- x$mean
+    names(y) <- x$coef
+    y
+  })
+lst.huc[['01070003']]
+```
+
+```{r}
+lst.site <- coef.list$B.site %>%
+  select(site, coef, mean) %>% 
+  split(f=.$site) %>% 
+  lapply(FUN=function(x) { 
+    y <- x$mean
+    names(y) <- x$coef
+    y
+  })
+lst.site[['CTDEP_1038']]
+```
+
+```{r}
+lst.fixed <- coef.list$B.fixed$mean
+names(lst.fixed) <- coef.list$B.fixed$coef
+lst.fixed
+```
